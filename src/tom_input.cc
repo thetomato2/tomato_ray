@@ -206,7 +206,7 @@ fn Input init_input()
     return result;
 }
 
-fn void do_input(Input *input, HWND hwnd, i32 ms_scroll)
+fn void do_input(Input *input, HWND hwnd, s32 ms_scroll)
 {
     // mouse cursor
     POINT mouse_point;

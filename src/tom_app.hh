@@ -33,18 +33,19 @@ struct AppState
     szt total_size;
     Win32State win32;
     D3D11State d3d11;
+    RayState ray;
     Input input;
     Texture back_buffer;
     u32 update_hertz;
     u32 dpi;
     f32 target_secs_per_frame;
-    i64 performance_counter_frequency;
+    s64 performance_counter_frequency;
     u64 frame_cnt;
     u32 work_ind;
     f32 work_secs[256];
     f32 ms_frame;
-    i32 fps;
-    i32 target_fps;
+    s32 fps;
+    s32 target_fps;
     char exe_path[MAX_PATH];
     f32 dt;
     f32 time;
@@ -56,4 +57,5 @@ struct AppState
 
     D3D11ShaderProg main_shader;
 };
+
 }  // namespace tom

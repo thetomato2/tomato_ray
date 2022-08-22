@@ -180,7 +180,7 @@ fn void pan_camera(Camera* cam, Cam_Move_Dir dir, f32 dt)
     }
 }
 
-fn void mouse_look_cam(Camera* cam, Mouse ms, r2i win_dims)
+fn void mouse_look_cam(Camera* cam, Mouse ms, r2s win_dims)
 {
     v2f ms_delta = ms.get_delta();
     if (ms.pos.x < 0.0f || ms.pos.x > (f32)win_dims.x1 || ms.pos.u < 0.0f ||
@@ -202,7 +202,7 @@ fn void mouse_look_cam(Camera* cam, Mouse ms, r2i win_dims)
     // cam.target = qua::rotate(cam.target, cam.up, 1.0f);
 }
 
-fn void orbit_cam(Camera* cam, Keyboard kb, Mouse ms, r2i win_dims, f32* dist = nullptr,
+fn void orbit_cam(Camera* cam, Keyboard kb, Mouse ms, r2s win_dims, f32* dist = nullptr,
                         v3f* target_pos = nullptr)
 {
     if (target_pos) cam->target_pos = *target_pos;

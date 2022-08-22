@@ -3,7 +3,7 @@ namespace tom
 
 // NOTE: HARDCODED!!!
 // maps a glyph index to a char
-function char get_glyph_char(i32 i)
+function char get_glyph_char(s32 i)
 {
     switch (i) {
         case 0: return ' ';
@@ -101,7 +101,7 @@ function char get_glyph_char(i32 i)
 
 // NOTE: HARDCODED!!!
 // maps a char to a glyph index
-function i32 get_glyph_index(char c)
+function s32 get_glyph_index(char c)
 {
     switch (c) {
         case 'a': return 1;
@@ -205,8 +205,8 @@ fn ttf_GlyphResult load_ttf_glyph(const char* file_path, f32 point_sz, char glyp
         InvalidCodePath;
     }
 
-    i32 bake_width  = 64;
-    i32 bake_height = 100;
+    s32 bake_width  = 64;
+    s32 bake_height = 100;
 
     stbtt_fontinfo font;
     stbtt_InitFont(&font, (byt*)ttf_file.contents,
@@ -229,12 +229,12 @@ fn FontSheet create_font_sheet(const char* name, const char* file_path, f32 poin
 
     bool draw_lines = false;
 
-    i32 row_cnt     = 13;
-    i32 col_cnt     = 1;
-    i32 glyph_cnt   = 87;
-    i32 pad         = 20;
-    i32 max_glyph_x = 0;
-    i32 max_glyph_y = 0;
+    s32 row_cnt     = 13;
+    s32 col_cnt     = 1;
+    s32 glyph_cnt   = 87;
+    s32 pad         = 20;
+    s32 max_glyph_x = 0;
+    s32 max_glyph_y = 0;
 
     auto ttf_file = read_file(file_path);
     if (ttf_file.contents == nullptr) {
@@ -246,13 +246,13 @@ fn FontSheet create_font_sheet(const char* name, const char* file_path, f32 poin
                    stbtt_GetFontOffsetForIndex((byt*)ttf_file.contents, 0));
 
     f32 scale = stbtt_ScaleForPixelHeight(&font, point_sz);
-    i32 ascent;
+    s32 ascent;
     stbtt_GetFontVMetrics(&font, &ascent, 0, 0);
 
     // load all the glyphs to get the toal size of the bitmap needed
-    for (i32 i = 1; i < glyph_cnt + 1; ++i) {
+    for (s32 i = 1; i < glyph_cnt + 1; ++i) {
         char c = get_glyph_char(i);
-        r2i bounds;
+        r2s bounds;
         stbtt_GetCodepointBitmapBox(&font, c, scale, scale, &bounds.x0, &bounds.y0, &bounds.x1,
                                     &bounds.y1);
         max_glyph_x = max(bounds.x1 - bounds.x0, max_glyph_x);
@@ -260,30 +260,30 @@ fn FontSheet create_font_sheet(const char* name, const char* file_path, f32 poin
     }
 
     // allocate the needed size
-    i32 r         = max(max_glyph_x, max_glyph_y) + pad;
+    s32 r         = max(max_glyph_x, max_glyph_y) + pad;
     result.width  = r * row_cnt;
     result.height = (glyph_cnt / row_cnt) * r + r;
     szt buf_sz    = sizeof(byt) * result.width * result.height * glyph_cnt;
     auto bm_buf   = (byt*)plat_malloc(buf_sz);
     zero_size(bm_buf, buf_sz);
 
-    i32 baseline = r - r / 4;
+    s32 baseline = r - r / 4;
 
     // draw the glyphs to the bitmap
-    i32 cur_x = 0, cur_y = 0;
-    for (i32 i = 1; i < glyph_cnt + 1; ++i) {
+    s32 cur_x = 0, cur_y = 0;
+    for (s32 i = 1; i < glyph_cnt + 1; ++i) {
         char c = get_glyph_char(i);
         ttf_GlyphResult glyph;
         glyph.bitmap = (void*)stbtt_GetCodepointBitmap(&font, scale, scale, c, &glyph.width,
                                                        &glyph.height, &glyph.x_off, &glyph.y_off);
 
-        i32 y_off      = baseline + glyph.y_off;
-        i32 x_off      = r / 2 - glyph.width / 2;
+        s32 y_off      = baseline + glyph.y_off;
+        s32 x_off      = r / 2 - glyph.width / 2;
         byt* row       = bm_buf + (cur_x + x_off) + (cur_y + y_off) * result.width;
         byt* glyph_ptr = (byt*)glyph.bitmap;
-        for (i32 y = 0; y < glyph.height; ++y) {
+        for (s32 y = 0; y < glyph.height; ++y) {
             byt* dest_ptr = row;
-            for (i32 x = 0; x < glyph.width; ++x) {
+            for (s32 x = 0; x < glyph.width; ++x) {
                 *dest_ptr++ = *glyph_ptr++;
             }
             row += result.width;
@@ -299,16 +299,16 @@ fn FontSheet create_font_sheet(const char* name, const char* file_path, f32 poin
     }
 
     if (draw_lines) {
-        for (i32 y = 0; y < result.height; y += r) {
+        for (s32 y = 0; y < result.height; y += r) {
             byt* row = bm_buf + y * result.width;
-            for (i32 x = 0; x < result.width; ++x) {
+            for (s32 x = 0; x < result.width; ++x) {
                 row[x] = 0xff;
             }
         }
 
-        for (i32 y = 0; y < result.height; ++y) {
+        for (s32 y = 0; y < result.height; ++y) {
             byt* row = bm_buf + y * result.width;
-            for (i32 x = 0; x < result.width; ++x) {
+            for (s32 x = 0; x < result.width; ++x) {
                 if (x % r == 0) row[x] = 0xff;
             }
         }
@@ -330,14 +330,14 @@ fn char* write_fontsheet_png(FontSheet* fs)
     return path_buf;
 }
 
-fn v2f get_uv_offset(FontSheet* fs, i32 glyph_ind)
+fn v2f get_uv_offset(FontSheet* fs, s32 glyph_ind)
 {
     v2f result;
 
     f32 constexpr border = 2.0f;
 
-    i32 gx = glyph_ind % fs->x_cnt - 1;
-    i32 gy = ((glyph_ind - 1) / fs->x_cnt);
+    s32 gx = glyph_ind % fs->x_cnt - 1;
+    s32 gy = ((glyph_ind - 1) / fs->x_cnt);
 
     result.x = (f32)fs->r * (f32)gx;
     result.y = (f32)fs->height - (f32)fs->r * (f32)(gy + 1);
@@ -345,7 +345,7 @@ fn v2f get_uv_offset(FontSheet* fs, i32 glyph_ind)
     return result;
 }
 
-fn void alloc_glyph_cache(GfxState* gfx, r2i dims)
+fn void alloc_glyph_cache(GfxState* gfx, r2s dims)
 {
     // Reset the buffers if they exists
     if (gfx->glyph_tex) {

@@ -183,22 +183,22 @@ namespace tom
 {
 struct ThreadContext
 {
-    i32 place_holder;
+    s32 place_holder;
 };
 
 // Generic flag stuff
 
-inline bool is_flag_set(i32 flags, i32 flag)
+inline bool is_flag_set(s32 flags, s32 flag)
 {
     return flags & flag;
 }
 
-inline void set_flags(i32& flags, i32 flag)
+inline void set_flags(s32& flags, s32 flag)
 {
     flags |= flag;
 }
 
-inline void clear_flags(i32& flags, i32 flag)
+inline void clear_flags(s32& flags, s32 flag)
 {
     flags &= ~flag;
 }

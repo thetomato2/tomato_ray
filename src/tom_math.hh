@@ -41,9 +41,9 @@ inline T bi_lerp(T v0, T v1, T v2, T v3, f32 a, f32 b)
     return (1.0f - b) * (v0 * a1 + v1 * a) + b * (v2 * a1 + v3 * a);
 }
 
-inline i32 fast_floor(f32 fp)
+inline s32 fast_floor(f32 fp)
 {
-    i32 i = (i32)fp;
+    s32 i = (s32)fp;
 
     return (fp < i) ? (i - 1) : (i);
 }
@@ -83,9 +83,9 @@ inline void scalar_sin_cos(f32 *p_sin, f32 *p_cos, f32 val)
     f32 quo = XM_1DIV2PI * val;
 
     if (val >= 0.0f)
-        quo = (f32)(i32)(quo + 0.5f);
+        quo = (f32)(s32)(quo + 0.5f);
     else
-        quo = (f32)(i32)(quo - 0.5f);
+        quo = (f32)(s32)(quo - 0.5f);
 
     f32 y = val - XM_2PI * quo;
     f32 sign;
@@ -1329,8 +1329,8 @@ inline m4 mat_transpose(m4 a)
     res.e[15] = a.e[15];
 #else
 
-    for (i32 i = 0; i < 4; ++i) {
-        for (i32 j = 0; j < 4; ++j) {
+    for (s32 i = 0; i < 4; ++i) {
+        for (s32 j = 0; j < 4; ++j) {
             res.m[i][j] = a.m[j][i];
         }
     }
@@ -1771,9 +1771,9 @@ inline v3f rect_barycenter(r3f a, v3f p)
     return res;
 }
 
-inline r2i rect_f32_to_i32(r2f a)
+inline r2s rect_f32_to_i32(r2f a)
 {
-    r2i res;
+    r2s res;
 
     res.x0 = round_f32_to_i32(a.x0);
     res.x1 = round_f32_to_i32(a.x1);
@@ -1783,9 +1783,9 @@ inline r2i rect_f32_to_i32(r2f a)
     return res;
 }
 
-inline r3i rect_f32_to_i32(r3f a)
+inline r3s rect_f32_to_i32(r3f a)
 {
-    r3i res;
+    r3s res;
 
     res.x0 = round_f32_to_i32(a.x0);
     res.x1 = round_f32_to_i32(a.x1);

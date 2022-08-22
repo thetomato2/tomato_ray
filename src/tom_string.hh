@@ -7,7 +7,7 @@
 namespace tom
 {
 
-fn char itoc(i32 d)
+fn char itoc(s32 d)
 {
     Assert(d < 10);
 
@@ -27,10 +27,10 @@ fn char itoc(i32 d)
     return '\0';
 }
 
-fn char *itos(i32 n)
+fn char *itos(s32 n)
 {
     szt len = 0;
-    i32 x   = n;
+    s32 x   = n;
     while (x > 0) {
         x /= 10;
         ++len;
@@ -39,7 +39,7 @@ fn char *itos(i32 n)
     char *result = (char *)plat_malloc(sizeof(char) * (len + 1));
     char *ptr    = result + len;
     *ptr--       = '\0';
-    for (i32 i = 0; i < len; ++i) {
+    for (s32 i = 0; i < len; ++i) {
         *ptr-- = itoc(n % 10);
         n /= 10;
     }
@@ -48,9 +48,9 @@ fn char *itos(i32 n)
 }
 
 // TODO: this is pretty barebones
-fn i32 stoi(const char *str)
+fn s32 stoi(const char *str)
 {
-    i32 i = 0;
+    s32 i = 0;
     while (*str >= '0' && *str <= '9') {
         i = i * 10 + (*str - '0');
         str++;
@@ -58,7 +58,7 @@ fn i32 stoi(const char *str)
     return i;
 }
 
-fn i32 stoi(const char c)
+fn s32 stoi(const char c)
 {
     switch (c) {
         case '0': return 0;
@@ -178,7 +178,7 @@ fn char *str_fmt(const char *format, Args... args)
 
 fn char *convert_wstring_to_string(const wchar *wstr)
 {
-    i32 cnt     = WideCharToMultiByte(CP_ACP, 0, wstr, -1, NULL, 0, NULL, NULL);
+    s32 cnt     = WideCharToMultiByte(CP_ACP, 0, wstr, -1, NULL, 0, NULL, NULL);
     auto result = plat_malloc<char>(cnt);
     WideCharToMultiByte(CP_ACP, 0, wstr, -1, result, cnt, NULL, NULL);
 
@@ -187,7 +187,7 @@ fn char *convert_wstring_to_string(const wchar *wstr)
 
 fn wchar *convert_string_to_wstring(const char *str)
 {
-    i32 cnt     = MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0);
+    s32 cnt     = MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0);
     auto result = plat_malloc<wchar>(cnt);
     MultiByteToWideChar(CP_ACP, 0, str, -1, result, cnt);
 
@@ -196,7 +196,7 @@ fn wchar *convert_string_to_wstring(const char *str)
 
 fn char *convert_wstring_to_string_utf8(const wchar *wstr)
 {
-    i32 cnt     = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
+    s32 cnt     = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
     auto result = plat_malloc<char>(cnt);
     WideCharToMultiByte(CP_UTF8, 0, wstr, -1, result, cnt, NULL, NULL);
 
@@ -205,7 +205,7 @@ fn char *convert_wstring_to_string_utf8(const wchar *wstr)
 
 fn wchar *convert_string_to_wstring_utf8(const char *str)
 {
-    i32 cnt     = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
+    s32 cnt     = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
     auto result = plat_malloc<wchar>(cnt);
     MultiByteToWideChar(CP_UTF8, 0, str, -1, result, cnt);
 

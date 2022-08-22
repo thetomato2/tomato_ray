@@ -1,9 +1,9 @@
 #include <cstdint>
 
-typedef int8_t i8;
-typedef int16_t i16;
-typedef int32_t i32;
-typedef int64_t i64;
+typedef int8_t s8;
+typedef int16_t s16;
+typedef int32_t s32;
+typedef int64_t s64;
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -74,7 +74,7 @@ union v2
 };
 
 typedef v2<f32> v2f;
-typedef v2<i32> v2i;
+typedef v2<s32> v2i;
 typedef v2<u32> v2u;
 
 template<typename T>
@@ -93,7 +93,7 @@ union v3
 };
 
 typedef v3<f32> v3f;
-typedef v3<i32> v3i;
+typedef v3<s32> v3i;
 typedef v3<u32> v3u;
 
 template<typename T>
@@ -113,7 +113,7 @@ union v4
 };
 
 typedef v4<f32> v4f;
-typedef v4<i32> v4i;
+typedef v4<s32> v4i;
 typedef v4<u32> v4u;
 
 union m3
@@ -145,7 +145,7 @@ union r2
 };
 
 typedef r2<f32> r2f;
-typedef r2<i32> r2i;
+typedef r2<s32> r2s;
 typedef r2<u32> r2u;
 
 template<typename T>
@@ -163,12 +163,12 @@ union r3
 };
 
 typedef r3<f32> r3f;
-typedef r3<i32> r3i;
+typedef r3<s32> r3s;
 typedef r3<u32> r3u;
 
 struct Button
 {
-    i32 half_transition_cnt;
+    s32 half_transition_cnt;
     b32 ended_down;
 };
 

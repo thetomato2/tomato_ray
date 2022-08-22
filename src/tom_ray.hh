@@ -30,6 +30,9 @@ struct Camera
 
 struct World
 {
+    v3f up;
+    Camera cam;
+
     u32 mat_cnt;
     Material *mats;
 
@@ -38,6 +41,30 @@ struct World
 
     u32 sphere_cnt;
     Sphere *spheres;
+
+    u64 ray_cnt;
+    u64 bounce_cnt;
+};
+
+struct RayState
+{
+    b32 initialized;
+    b32 rendering;
+    b32 render_finished;
+    Material materials[6];
+    Plane plane;
+    Sphere spheres[4];
+    World world;
+    u32 cpu_core_cnt;
+    u32 tile_w;
+    u32 tile_h;
+    u32 tile_cnt_x;
+    u32 tile_cnt_y;
+    u32 cur_tile_x;
+    u32 cur_tile_y;
+    s64 start_counter;
+    
+
 };
 
 }  // namespace tom

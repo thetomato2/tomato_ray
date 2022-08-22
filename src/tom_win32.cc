@@ -8,7 +8,7 @@ global bool g_resize        = false;
 global bool g_device_change = false;
 global bool g_focus         = false;
 v2i g_win_dim               = {};
-i32 g_ms_scroll             = {};
+s32 g_ms_scroll             = {};
 
 fn void toggle_fullscreen(Win32State* win32)
 {
@@ -373,7 +373,7 @@ fn void create_window(Win32State* win32)
 
     HDC hdc = GetDC(win32->hwnd);
 
-    i32 monitor_refresh_rate = GetDeviceCaps(hdc, VREFRESH);
+    s32 monitor_refresh_rate = GetDeviceCaps(hdc, VREFRESH);
     printf("Monitor Refresh Rate: %d\n", monitor_refresh_rate);
 }
 

@@ -4,6 +4,7 @@
 // #include "tom_camera.cc"
 #include "tom_input.cc"
 #include "tom_win32.cc"
+#include "tom_graphics.cc"
 #include "tom_ray.cc"
 
 namespace tom
@@ -29,10 +30,10 @@ fn void write_back_buffer(AppState *app)
     ScopedPtr<char> find_path = str_cat(out_dir, "\\*");
     HANDLE h_find             = FindFirstFileA(find_path.get(), &data);
     Assert(h_find != INVALID_HANDLE_VALUE);
-    i32 i = 0;
+    s32 i = 0;
     do {
         if (str_equal(data.cFileName, ".") || str_equal(data.cFileName, "..")) continue;
-        i32 j = 0;
+        s32 j = 0;
         while (data.cFileName[j] != '_') {
             j++;
         }
@@ -43,7 +44,7 @@ fn void write_back_buffer(AppState *app)
             --j;
         }
         c[5]  = '\0';
-        i32 x = stoi(c);
+        s32 x = stoi(c);
         i     = max(i, x);
     } while (FindNextFileA(h_find, &data));
     FindClose(h_find);
@@ -78,7 +79,7 @@ fn void on_resize(AppState *app)
     // graphical debugger is correct, the backbuffer's width needs to be 32 bit aligned or the pitch
     // is off and it distorts the final image in the window. And its happening after present is
     // called so I have no fucking clue.
-    i32 padding = 32;
+    s32 padding = 32;
     v2i aligned_dims;
     aligned_dims.w = app->win32.win_dims.w - app->win32.win_dims.w % padding;
     aligned_dims.h = app->win32.win_dims.h - app->win32.win_dims.h % padding;
@@ -162,11 +163,33 @@ fn void app_update(AppState *app)
 
     if (app->frame_cnt == 5 || key_pressed(kb->d)) app->draw_frame = true;
 
-    if ((app->win32.focus || !app->suspend_lost_focus) && app->draw_frame) {
-        ray_render(app);
-        copy_back_buffer(app);
-        app->draw_frame = false;
-        write_back_buffer(app);
+    if ((app->win32.focus || !app->suspend_lost_focus)) {
+        if (app->draw_frame && !app->ray.rendering) {
+            app->ray.rendering     = true;
+            app->ray.cur_tile_x    = 0;
+            app->ray.cur_tile_y    = 0;
+            app->ray.start_counter = get_time();
+            draw_clear(&app->back_buffer, v3f {});
+        }
+        if (app->ray.rendering) {
+            ray_render(app);
+            copy_back_buffer(app);
+            write_back_buffer(app);
+            ++app->ray.cur_tile_x;
+            if (app->ray.cur_tile_x > app->ray.tile_cnt_x) {
+                app->ray.cur_tile_x = 0;
+                ++app->ray.cur_tile_y;
+            }
+            if (app->ray.cur_tile_y > app->ray.tile_cnt_y) {
+                app->ray.rendering = false;
+                app->draw_frame    = false;
+                print_finished();
+                s64 end_counter     = get_time();
+                f32 seconds_elapsed = get_seconds_elapsed(app->ray.start_counter, end_counter,
+                                                          app->performance_counter_frequency);
+                printf(" - %.3f seconds\n", seconds_elapsed);
+            }
+        }
     }
 
     local bool once_only = false;
@@ -186,7 +209,7 @@ fn void app_update(AppState *app)
 
     once_only = true;
 
-    i32 glyph_ind = 0;
+    s32 glyph_ind = 0;
     m4 model      = mat_identity();
 
 #ifdef TOM_INTERNAL
@@ -210,7 +233,7 @@ fn void app_update(AppState *app)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // #START
-fn i32 app_start(HINSTANCE hinst)
+fn s32 app_start(HINSTANCE hinst)
 {
     const TCHAR *icon_path = _T("..\\..\\data\\tomato.ico");
     auto icon              = (HICON)(LoadImage(NULL, icon_path, IMAGE_ICON, 0, 0,
@@ -248,7 +271,7 @@ fn i32 app_start(HINSTANCE hinst)
     printf("cwd: %s\n", cwd);
 
     char *p_ = &app.exe_path[exe_path_len];
-    i32 i_   = (i32)exe_path_len;
+    s32 i_   = (s32)exe_path_len;
     while (i_ > -1 && app.exe_path[i_] != '\\') {
         --i_;
     }
@@ -313,7 +336,7 @@ fn i32 app_start(HINSTANCE hinst)
     app.d3d11.viewport.MinDepth = 0.0f;
     app.d3d11.viewport.MaxDepth = 1.0f;
 
-    i64 last_counter     = get_time();
+    s64 last_counter     = get_time();
     u64 last_cycle_count = __rdtsc();
 
     f32 delta_time = 0.0f;
@@ -358,7 +381,7 @@ fn i32 app_start(HINSTANCE hinst)
         one_sec += app.ms_frame;
         if (one_sec > 1000.0f) {
             one_sec -= 1000.0f;
-            app.fps   = (i32)frame_cnt;
+            app.fps   = (s32)frame_cnt;
             frame_cnt = 0;
         }
 
@@ -397,14 +420,14 @@ fn i32 app_start(HINSTANCE hinst)
                                                                 app.performance_counter_frequency);
             }
         } else {
-            PrintWarning("Missed frame timing!");
+            // PrintWarning("Missed frame timing!");
         }
 
         auto end_counter = get_time();
         app.ms_frame     = 1000.f * get_seconds_elapsed(last_counter, end_counter,
                                                         app.performance_counter_frequency);
-
-        last_counter = end_counter;
+    
+    last_counter = end_counter;
 
         u64 end_cycle_count = __rdtsc();
         u64 cycles_elapsed  = end_cycle_count - last_cycle_count;

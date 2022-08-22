@@ -52,14 +52,14 @@ inline cycle_counter* get_cycle_counter(vector<cycle_counter>* counters, cycle_c
 
 #endif
 
-inline i64 get_time()
+inline s64 get_time()
 {
     LARGE_INTEGER time;
     QueryPerformanceCounter(&time);
     return time.QuadPart;
 }
 
-inline f32 get_seconds_elapsed(i64 start, i64 end, i64 performance_counter_frequency)
+inline f32 get_seconds_elapsed(s64 start, s64 end, s64 performance_counter_frequency)
 {
     return (f32)(end - start) / (f32)performance_counter_frequency;
 }

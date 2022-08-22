@@ -11,7 +11,7 @@ struct Win32State
     DWORD dw_style;
     DWORD ex_style;
     v2i win_dims;
-    i32 ms_scroll;
+    s32 ms_scroll;
     WINDOWPLACEMENT win_pos = { sizeof(win_pos) };
     HWND hwnd;
     HINSTANCE hinst;

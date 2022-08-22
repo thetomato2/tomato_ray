@@ -26,9 +26,9 @@ inline bitscan_result find_least_signifcant_set_bit(u32 val)
     return result;
 }
 
-inline i32 round_f32_to_i32(f32 val)
+inline s32 round_f32_to_i32(f32 val)
 {
-    i32 result = (i32)roundf(val);
+    s32 result = (s32)roundf(val);
     return result;
 }
 
@@ -38,9 +38,9 @@ inline u32 round_f32_to_u32(f32 val)
     return result;
 }
 
-inline i32 floorf_to_i32(f32 val)
+inline s32 floorf_to_i32(f32 val)
 {
-    i32 result = (i32)floorf(val);
+    s32 result = (s32)floorf(val);
     return result;
 }
 
@@ -74,15 +74,15 @@ inline f32 abs_f32(f32 val)
     return result;
 }
 
-inline i32 sign_of(i32 val)
+inline s32 sign_of(s32 val)
 {
-    i32 result = (val >= 0) ? 1 : -1;
+    s32 result = (val >= 0) ? 1 : -1;
     return result;
 }
 
-inline i32 ceilf_to_i32(f32 val)
+inline s32 ceilf_to_i32(f32 val)
 {
-    i32 result = (i32)ceilf(val);
+    s32 result = (s32)ceilf(val);
     return result;
 }
 

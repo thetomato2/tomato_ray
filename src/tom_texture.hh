@@ -11,7 +11,7 @@ struct Texture
         R8G8B8A8,
     };
 
-    i32 width, height;
+    s32 width, height;
     Type type;
     void *buf;
 };
@@ -32,7 +32,7 @@ fn constexpr u32 texture_get_texel_size(Texture::Type type)
     return -1;
 };
 
-fn constexpr i32 texture_get_num_channels(Texture::Type type)
+fn constexpr s32 texture_get_num_channels(Texture::Type type)
 {
     switch (type) {
         case Texture::Type::none: return 0;
@@ -43,7 +43,7 @@ fn constexpr i32 texture_get_num_channels(Texture::Type type)
     return -1;
 };
 
-fn Texture::Type texture_type_from_channels(i32 n_channels)
+fn Texture::Type texture_type_from_channels(s32 n_channels)
 {
     switch (n_channels) {
         case 0: return Texture::Type::none;
@@ -83,7 +83,7 @@ fn u32 texture_get_pitch(Texture *tex)
 fn Texture texture_load_from_file(const char *path)
 {
     Texture result;
-    i32 n_channels;
+    s32 n_channels;
 
     // stbi_set_flip_vertically_on_load(true);
     result.buf  = (void *)stbi_load(path, &result.width, &result.height, &n_channels, 0);
@@ -100,9 +100,9 @@ fn void make_sphere_nrm_map(Texture *tex, f32 rough, f32 cx = 1.0f, f32 cy = 1.0
     u32 pitch      = texture_get_pitch(*tex);
 
     auto row = (byt *)tex->buf;
-    for (i32 y = 0; y < tex->height; ++y) {
+    for (s32 y = 0; y < tex->height; ++y) {
         auto texel = (u32 *)row;
-        for (i32 x = 0; x < tex->width; ++x) {
+        for (s32 x = 0; x < tex->width; ++x) {
             v2f tex_uv    = { inv_width * (f32)x, inv_height * (f32)y };
             f32 nx        = cx * (2.0f * tex_uv.x - 1.0f);
             f32 ny        = cy * (2.0f * tex_uv.y - 1.0f);
@@ -126,9 +126,9 @@ fn void make_pyramid_nrm_map(Texture *tex, f32 rough)
     u32 pitch      = texture_get_pitch(*tex);
 
     auto row = (byt *)tex->buf;
-    for (i32 y = 0; y < tex->height; ++y) {
+    for (s32 y = 0; y < tex->height; ++y) {
         auto texel = (u32 *)row;
-        for (i32 x = 0; x < tex->width; ++x) {
+        for (s32 x = 0; x < tex->width; ++x) {
             v2f tex_uv = { inv_width * (f32)x, inv_height * (f32)y };
             f32 inv_x  = tex->width - 1 - x;
             v3f nrm    = { 0, 0, seven };
@@ -153,7 +153,7 @@ fn void make_pyramid_nrm_map(Texture *tex, f32 rough)
     }
 }
 
-fn BilinearSample get_bilinear_sample(Texture *texture, i32 x, i32 y)
+fn BilinearSample get_bilinear_sample(Texture *texture, s32 x, s32 y)
 {
     u32 texel_sz   = texture_get_texel_size(texture->type);
     u32 tex_pitch  = texture_get_pitch(texture);

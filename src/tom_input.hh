@@ -162,7 +162,7 @@ struct Mouse
         };
     };
 
-    i32 scroll;
+    s32 scroll;
 
     v2f get_delta() const { return pos - pos_last; }
 };
