@@ -46,6 +46,21 @@ struct World
     u64 bounce_cnt;
 };
 
+struct RayWorkOrder
+{
+    World *world;
+    Texture *image;
+    r2u tile;
+};
+
+struct RayWorkQueue
+{
+    u32 work_order_cnt;
+    RayWorkOrder *work_orders;
+
+    volatile u32 next_work_order_i;
+};
+
 struct RayState
 {
     b32 initialized;
@@ -60,11 +75,10 @@ struct RayState
     u32 tile_h;
     u32 tile_cnt_x;
     u32 tile_cnt_y;
-    u32 cur_tile_x;
-    u32 cur_tile_y;
     s64 start_counter;
     
-
+    RayWorkQueue work_queue;
 };
+
 
 }  // namespace tom

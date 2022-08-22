@@ -19,19 +19,19 @@ fn void print_finished()
     printf("\nFinished!");
 }
 
-fn f32 exact_linear_to_sRGB(f32 L)
+fn f32 exact_linear_to_sRGB(f32 c)
 {
-    if (L < 0.0f) {
-        L = 0.0f;
+    if (c < 0.0f) {
+        c = 0.0f;
     }
 
-    if (L > 1.0f) {
-        L = 1.0f;
+    if (c > 1.0f) {
+        c = 1.0f;
     }
 
-    f32 S = L * 12.92f;
-    if (L > 0.0031308f) {
-        S = 1.055f * pow(L, 1.0f / 2.4f) - 0.055f;
+    f32 S = c * 12.92f;
+    if (c > 0.0031308f) {
+        S = 1.055f * pow(c, 1.0f / 2.4f) - 0.055f;
     }
 
     return (S);
@@ -136,114 +136,112 @@ fn v3f ray_cast(World *world, v3f ray_orig, v3f ray_dir)
     return result;
 }
 
-fn void render_tile(AppState *app, World *world, r2u tile)
+fn void ray_render_tile(RayWorkOrder *wo)
 {
     f32 film_dist = 1.0f;
-    v3f film_cen  = world->cam.p - film_dist * world->cam.z;
+    v3f film_cen  = wo->world->cam.p - film_dist * wo->world->cam.z;
     v2f film_dims = { 1.0f, 1.0f };
-    if (app->back_buffer.width > app->back_buffer.height) {
-        film_dims.h = film_dims.w * (f32)app->back_buffer.height / (f32)app->back_buffer.width;
-    } else if (app->back_buffer.height > app->back_buffer.width) {
-        film_dims.w = film_dims.h * (f32)app->back_buffer.width / (f32)app->back_buffer.height;
+    if (wo->image->width > wo->image->height) {
+        film_dims.h = film_dims.w * (f32)wo->image->height / (f32)wo->image->width;
+    } else if (wo->image->height > wo->image->width) {
+        film_dims.w = film_dims.h * (f32)wo->image->width / (f32)wo->image->height;
     }
     v2f half_film_dims = 0.5f * film_dims;
     s64 start_counter  = get_time();
     u32 rays_per_pix   = 16;
 
     Color_u32 clr_col = { 0xfff00000 };
-    auto buf_ptr      = (u32 *)app->back_buffer.buf;
-    for (s32 y = tile.y0; y < tile.y1; ++y) {
-        f32 fy = -1.0f + 2.0f * ((f32)y / (f32)app->back_buffer.height);
+    auto buf_ptr      = (u32 *)wo->image->buf;
+    for (s32 y = wo->tile.y0; y < wo->tile.y1; ++y) {
+        f32 fy = -1.0f + 2.0f * ((f32)y / (f32)wo->image->height);
         // fy = -fy; // flip the image
-        for (s32 x = tile.x0; x < tile.x1; ++x) {
-            f32 fx     = -1.0f + 2.0f * ((f32)x / (f32)app->back_buffer.width);
-            v3f film_p = film_cen + fx * half_film_dims.w * world->cam.x +
-                         fy * half_film_dims.h * world->cam.y;
-            v3f ray_orig    = world->cam.p;
-            v3f ray_dir     = vec_noz(film_p - world->cam.p);
+        for (s32 x = wo->tile.x0; x < wo->tile.x1; ++x) {
+            f32 fx     = -1.0f + 2.0f * ((f32)x / (f32)wo->image->width);
+            v3f film_p = film_cen + fx * half_film_dims.w * wo->world->cam.x +
+                         fy * half_film_dims.h * wo->world->cam.y;
+            v3f ray_orig    = wo->world->cam.p;
+            v3f ray_dir     = vec_noz(film_p - wo->world->cam.p);
             f32 ray_contrib = 1.0f / (f32)rays_per_pix;
             v3f col         = {};
             for (u32 ray_i = 0; ray_i < rays_per_pix; ++ray_i) {
-                ++world->ray_cnt;
-                col += ray_contrib * ray_cast(world, ray_orig, ray_dir);
+                ++wo->world->ray_cnt;
+                col += ray_contrib * ray_cast(wo->world, ray_orig, ray_dir);
             }
             col = exact_linear_to_sRGB(col);
 
-            buf_ptr[y * app->back_buffer.width + x] = v3f_to_color_u32(col).rgba;
+            buf_ptr[y * wo->image->width + x] = v3f_to_color_u32(col).rgba;
         }
     }
 }
 
-fn void ray_render(AppState *app)
+fn void ray_init(AppState *app)
 {
     RayState *ray = &app->ray;
 
-    if (!ray->initialized) {
-        ray->materials[0].emit_col    = { 0.2f, 0.4f, 0.8f };
-        ray->materials[1].reflect_col = { 0.2f, 0.6f, 0.2f };
-        ray->materials[2].emit_col    = { 4.0f, 0.0f, 0.0f };
-        ray->materials[2].reflect_col = { 1.0f, 0.0f, 0.0f };
-        ray->materials[2].scatter     = 0.2f;
-        ray->materials[3].reflect_col = { 0.9f, 0.9f, 0.9f };
-        ray->materials[3].scatter     = 0.7f;
-        ray->materials[4].reflect_col = { 0.0f, 1.0f, 0.0f };
-        ray->materials[4].scatter     = 1.0f;
-        ray->materials[5].reflect_col = { 0.0f, 0.0f, 1.0f };
-        ray->materials[5].scatter     = 1.0f;
+    ray->materials[0].emit_col    = { 0.2f, 0.4f, 0.8f };
+    ray->materials[1].reflect_col = { 0.2f, 0.6f, 0.2f };
+    ray->materials[2].emit_col    = { 4.0f, 0.0f, 0.0f };
+    ray->materials[2].reflect_col = { 1.0f, 0.0f, 0.0f };
+    ray->materials[2].scatter     = 0.2f;
+    ray->materials[3].reflect_col = { 0.9f, 0.9f, 0.9f };
+    ray->materials[3].scatter     = 0.7f;
+    ray->materials[4].reflect_col = { 0.0f, 1.0f, 0.0f };
+    ray->materials[4].scatter     = 1.0f;
+    ray->materials[5].reflect_col = { 0.0f, 0.0f, 1.0f };
+    ray->materials[5].scatter     = 1.0f;
 
-        ray->plane.n     = { 0.0f, 0.0f, 1.0f };
-        ray->plane.d     = 0;
-        ray->plane.mat_i = 1;
+    ray->plane.n     = { 0.0f, 0.0f, 1.0f };
+    ray->plane.d     = 0;
+    ray->plane.mat_i = 1;
 
-        ray->spheres[0].r     = 1.5f;
-        ray->spheres[0].mat_i = 3;
-        ray->spheres[1].p     = { -3, 1, 1 };
-        ray->spheres[1].r     = 1.0f;
-        ray->spheres[1].mat_i = 2;
-        ray->spheres[2].p     = { 3, 1, 2 };
-        ray->spheres[2].r     = 1.2f;
-        ray->spheres[2].mat_i = 4;
-        ray->spheres[3].p     = { 0.3f, 1, 2 };
-        ray->spheres[3].r     = 0.9f;
-        ray->spheres[3].mat_i = 5;
+    ray->spheres[0].r     = 1.5f;
+    ray->spheres[0].mat_i = 3;
+    ray->spheres[1].p     = { -3, 1, 1 };
+    ray->spheres[1].r     = 1.0f;
+    ray->spheres[1].mat_i = 2;
+    ray->spheres[2].p     = { 3, 1, 2 };
+    ray->spheres[2].r     = 1.2f;
+    ray->spheres[2].mat_i = 4;
+    ray->spheres[3].p     = { 0.3f, 1, 2 };
+    ray->spheres[3].r     = 0.9f;
+    ray->spheres[3].mat_i = 5;
 
-        ray->world.mat_cnt    = CountOf(ray->materials);
-        ray->world.mats       = ray->materials;
-        ray->world.plane_cnt  = 1;
-        ray->world.planes     = &ray->plane;
-        ray->world.sphere_cnt = CountOf(ray->spheres);
-        ray->world.spheres    = ray->spheres;
+    ray->world.mat_cnt    = CountOf(ray->materials);
+    ray->world.mats       = ray->materials;
+    ray->world.plane_cnt  = 1;
+    ray->world.planes     = &ray->plane;
+    ray->world.sphere_cnt = CountOf(ray->spheres);
+    ray->world.spheres    = ray->spheres;
 
-        ray->world.up = { 0.0f, 0.0f, 1.0f };
+    ray->world.up = { 0.0f, 0.0f, 1.0f };
 
-        ray->world.cam.p = { 0, -10, 1 };
-        ray->world.cam.z = vec_noz(ray->world.cam.p);
-        ray->world.cam.x = vec_noz(vec_cross(ray->world.cam.z, ray->world.up));
-        ray->world.cam.y = vec_noz(vec_cross(ray->world.cam.z, ray->world.cam.x));
+    ray->world.cam.p = { 0, -10, 1 };
+    ray->world.cam.z = vec_noz(ray->world.cam.p);
+    ray->world.cam.x = vec_noz(vec_cross(ray->world.cam.z, ray->world.up));
+    ray->world.cam.y = vec_noz(vec_cross(ray->world.cam.z, ray->world.cam.x));
 
-        ray->cpu_core_cnt = 8;
-        ray->tile_w       = (app->back_buffer.width - 1) / ray->cpu_core_cnt;
-        ray->tile_h       = ray->tile_w;
-        ray->tile_cnt_x   = (app->back_buffer.width + ray->tile_w - 1) / ray->tile_w;
-        ray->tile_cnt_y   = (app->back_buffer.height + ray->tile_h - 1) / ray->tile_h;
-        ray->cur_tile_x   = 0;
-        ray->cur_tile_y   = 0;
+    ray->cpu_core_cnt = 8;
+    ray->tile_w       = (app->back_buffer.width - 1) / ray->cpu_core_cnt;
+    ray->tile_h       = ray->tile_w;
+    ray->tile_cnt_x   = (app->back_buffer.width + ray->tile_w - 1) / ray->tile_w;
+    ray->tile_cnt_y   = (app->back_buffer.height + ray->tile_h - 1) / ray->tile_h;
 
-        ray->initialized = true;
+    ray->work_queue.work_order_cnt   = ray->tile_cnt_x * ray->tile_cnt_y;
+    ray->work_queue.work_orders      = plat_malloc<RayWorkOrder>(ray->work_queue.work_order_cnt);
+    ray->work_queue.next_work_order_i = 0;
+
+    for (u32 tile_y = 0; tile_y < ray->tile_cnt_y; ++tile_y) {
+        for (u32 tile_x = 0; tile_x < ray->tile_cnt_x; ++tile_x) {
+            RayWorkOrder *wo = &ray->work_queue.work_orders[tile_y * ray->tile_cnt_x + tile_x];
+            wo->world        = &ray->world;
+            wo->image        = &app->back_buffer;
+
+            wo->tile.x0 = tile_x * ray->tile_w;
+            wo->tile.y0 = tile_y * ray->tile_h;
+            wo->tile.x1 = min((u32)app->back_buffer.width, wo->tile.x0 + ray->tile_w);
+            wo->tile.y1 = min((u32)app->back_buffer.height, wo->tile.y0 + ray->tile_w);
+        }
     }
-
-    r2u tile;
-    tile.x0 = ray->cur_tile_x * ray->tile_w;
-    tile.y0 = ray->cur_tile_y * ray->tile_h;
-    tile.x1 = min((u32)app->back_buffer.width, tile.x0 + ray->tile_w);
-    tile.y1 = min((u32)app->back_buffer.height, tile.y0 + ray->tile_w);
-    render_tile(app, &ray->world, tile);
-    print_progress((f32)(ray->cur_tile_y * ray->tile_cnt_x + ray->cur_tile_x) /
-                   (f32)((ray->tile_cnt_x + 1) * (ray->tile_cnt_y + 1)));
-
-    // f64 bounce_ms = (f64)seconds_elapsed * 1000.0 / (f64)ray->world.bounce_cnt;
-    // f64 ray_ms    = (f64)seconds_elapsed * 1000.0 / (f64)ray->world.ray_cnt;
-    // printf("Bounces per ms: %f\n", bounce_ms);
-    // printf("Ray per ms: %f\n", ray_ms);
 }
+
 }  // namespace tom

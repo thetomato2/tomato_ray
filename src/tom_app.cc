@@ -78,7 +78,7 @@ fn void on_resize(AppState *app)
     // NOTE(Derek): for some reason, and I can't figure out why becuase the render target in the
     // graphical debugger is correct, the backbuffer's width needs to be 32 bit aligned or the pitch
     // is off and it distorts the final image in the window. And its happening after present is
-    // called so I have no fucking clue.
+    // called so its probalby something to do with the win32 window but I have no fucking clue.
     s32 padding = 32;
     v2i aligned_dims;
     aligned_dims.w = app->win32.win_dims.w - app->win32.win_dims.w % padding;
@@ -150,8 +150,6 @@ fn void app_init(AppState *app)
     d3d_Check(d3d11->device->CreateShaderResourceView(g_tex, nullptr, &g_sha_rsc_view));
 
     app->draw_frame = false;
-
-    // ray_init(nullptr, app);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -163,24 +161,24 @@ fn void app_update(AppState *app)
 
     if (app->frame_cnt == 5 || key_pressed(kb->d)) app->draw_frame = true;
 
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // #RAY
     if ((app->win32.focus || !app->suspend_lost_focus)) {
         if (app->draw_frame && !app->ray.rendering) {
-            app->ray.rendering     = true;
-            app->ray.cur_tile_x    = 0;
-            app->ray.cur_tile_y    = 0;
-            app->ray.start_counter = get_time();
             draw_clear(&app->back_buffer, v3f {});
+            ray_init(app);
+            app->ray.rendering     = true;
+            app->ray.start_counter = get_time();
         }
+
         if (app->ray.rendering) {
-            ray_render(app);
+            RayState *ray = &app->ray;
+            ray_render_tile(&ray->work_queue.work_orders[ray->work_queue.next_work_order_i++]);
             copy_back_buffer(app);
-            write_back_buffer(app);
-            ++app->ray.cur_tile_x;
-            if (app->ray.cur_tile_x > app->ray.tile_cnt_x) {
-                app->ray.cur_tile_x = 0;
-                ++app->ray.cur_tile_y;
-            }
-            if (app->ray.cur_tile_y > app->ray.tile_cnt_y) {
+
+            print_progress((f32)ray->work_queue.next_work_order_i /
+                           (f32)ray->work_queue.work_order_cnt);
+            if (ray->work_queue.next_work_order_i >= ray->work_queue.work_order_cnt) {
                 app->ray.rendering = false;
                 app->draw_frame    = false;
                 print_finished();
@@ -188,6 +186,8 @@ fn void app_update(AppState *app)
                 f32 seconds_elapsed = get_seconds_elapsed(app->ray.start_counter, end_counter,
                                                           app->performance_counter_frequency);
                 printf(" - %.3f seconds\n", seconds_elapsed);
+                plat_free(ray->work_queue.work_orders);
+                write_back_buffer(app);
             }
         }
     }
@@ -208,9 +208,6 @@ fn void app_update(AppState *app)
     d3d11->context->OMSetRenderTargets(1, &d3d11->render_target_view, d3d11->depth_buf_view);
 
     once_only = true;
-
-    s32 glyph_ind = 0;
-    m4 model      = mat_identity();
 
 #ifdef TOM_INTERNAL
     if (key_pressed(kb->f3)) d3d11_print_info_queue(d3d11);
@@ -426,8 +423,8 @@ fn s32 app_start(HINSTANCE hinst)
         auto end_counter = get_time();
         app.ms_frame     = 1000.f * get_seconds_elapsed(last_counter, end_counter,
                                                         app.performance_counter_frequency);
-    
-    last_counter = end_counter;
+
+        last_counter = end_counter;
 
         u64 end_cycle_count = __rdtsc();
         u64 cycles_elapsed  = end_cycle_count - last_cycle_count;
