@@ -14,6 +14,32 @@ global ID3D11Texture2D *g_tex;
 global ID3D11Texture2D *g_staging_tex;
 global ID3D11ShaderResourceView *g_sha_rsc_view;
 
+fn u64 lock_add_return_prev(volatile u64 *val, u64 addend)
+{
+    u64 result = InterlockedExchangeAdd64((volatile LONG64 *)val, addend);
+    return result;
+}
+
+fn DWORD WINAPI worker_thread(void *lpParam)
+{
+    RayWorkQueue *queue = (RayWorkQueue *)lpParam;
+    if (queue->finished) return true;
+    RayWorkOrder *wo = &queue->work_orders[queue->next_work_order_i];
+
+    ray_render_tile(wo);
+    u64 last_wo_i = lock_add_return_prev(&queue->tiles_finished, 1);
+    if (last_wo_i >= queue->work_order_cnt - 1) queue->finished = true;
+
+    return 0;
+}
+
+fn void create_worker_thread(void *param)
+{
+    DWORD thread_id;
+    HANDLE thread_hnd = CreateThread(0, 0, worker_thread, param, 0, &thread_id);
+    CloseHandle(thread_hnd);
+}
+
 fn void on_device_change(AppState *app)
 {
     if (app->device_changed_delay > 0.5f) {
@@ -67,13 +93,9 @@ fn void copy_back_buffer(AppState *app)
     d3d11->context->CopyResource(g_tex, g_staging_tex);
 }
 
-fn void on_resize(AppState *app)
+fn void create_resources(AppState *app)
 {
     auto d3d11 = &app->d3d11;
-
-    f32 aspect = (f32)app->win32.win_dims.w / (f32)app->win32.win_dims.h;
-    // app->proj = mat_proj_persp(aspect, app->fov, 1.0f, 1000.0f);
-    d3d11_on_resize(d3d11, app->win32.win_dims);
 
     // NOTE(Derek): for some reason, and I can't figure out why becuase the render target in the
     // graphical debugger is correct, the backbuffer's width needs to be 32 bit aligned or the pitch
@@ -84,14 +106,10 @@ fn void on_resize(AppState *app)
     aligned_dims.w = app->win32.win_dims.w - app->win32.win_dims.w % padding;
     aligned_dims.h = app->win32.win_dims.h - app->win32.win_dims.h % padding;
 
-    plat_free(app->back_buffer.buf);
     app->back_buffer.width  = aligned_dims.w;
     app->back_buffer.height = aligned_dims.h;
+    app->back_buffer.type   = Texture::Type::R8G8B8A8;
     app->back_buffer.buf    = plat_malloc(texture_get_size(app->back_buffer));
-
-    g_tex->Release();
-    g_staging_tex->Release();
-    g_sha_rsc_view->Release();
 
     D3D11_TEXTURE2D_DESC tex_desc = { .Width      = (u32)app->back_buffer.width,
                                       .Height     = (u32)app->back_buffer.height,
@@ -110,7 +128,22 @@ fn void on_resize(AppState *app)
 
     d3d_Check(d3d11->device->CreateTexture2D(&tex_desc, NULL, &g_staging_tex));
     d3d_Check(d3d11->device->CreateShaderResourceView(g_tex, nullptr, &g_sha_rsc_view));
+}
 
+fn void on_resize(AppState *app)
+{
+    auto d3d11 = &app->d3d11;
+
+    f32 aspect = (f32)app->win32.win_dims.w / (f32)app->win32.win_dims.h;
+    // app->proj = mat_proj_persp(aspect, app->fov, 1.0f, 1000.0f);
+    d3d11_on_resize(d3d11, app->win32.win_dims);
+
+    g_tex->Release();
+    g_staging_tex->Release();
+    g_sha_rsc_view->Release();
+    plat_free(app->back_buffer.buf);
+
+    create_resources(app);
     copy_back_buffer(app);
 }
 
@@ -118,37 +151,12 @@ fn void on_resize(AppState *app)
 // #INIT
 fn void app_init(AppState *app)
 {
-    auto d3d11 = &app->d3d11;
-    app->fov   = 1.0f;
+    app->fov = 1.0f;
 
-    app->input = init_input();
+    app->input       = init_input();
+    app->main_shader = d3d11_create_shader_prog(&app->d3d11, L"..\\..\\shaders\\fs_blit.hlsl");
 
-    app->main_shader = d3d11_create_shader_prog(d3d11, L"..\\..\\shaders\\fs_blit.hlsl");
-    v2i aligned_dims;
-    // aligned_dims.w =;
-
-    app->back_buffer.width  = app->win32.win_dims.w;
-    app->back_buffer.height = app->win32.win_dims.h;
-    app->back_buffer.type   = Texture::Type::R8G8B8A8;
-    app->back_buffer.buf    = plat_malloc(texture_get_size(app->back_buffer));
-
-    D3D11_TEXTURE2D_DESC tex_desc = { .Width      = (u32)app->back_buffer.width,
-                                      .Height     = (u32)app->back_buffer.height,
-                                      .ArraySize  = 1,
-                                      .Format     = DXGI_FORMAT_R8G8B8A8_UNORM,
-                                      .SampleDesc = { .Count = 1, .Quality = 0 },
-                                      .Usage      = D3D11_USAGE_DEFAULT,
-                                      .BindFlags  = D3D11_BIND_SHADER_RESOURCE };
-
-    d3d_Check(d3d11->device->CreateTexture2D(&tex_desc, NULL, &g_tex));
-
-    tex_desc.Usage          = D3D11_USAGE_STAGING;
-    tex_desc.BindFlags      = 0;
-    tex_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE;
-
-    d3d_Check(d3d11->device->CreateTexture2D(&tex_desc, NULL, &g_staging_tex));
-    d3d_Check(d3d11->device->CreateShaderResourceView(g_tex, nullptr, &g_sha_rsc_view));
-
+    create_resources(app);
     app->draw_frame = false;
 }
 
@@ -167,18 +175,32 @@ fn void app_update(AppState *app)
         if (app->draw_frame && !app->ray.rendering) {
             draw_clear(&app->back_buffer, v3f {});
             ray_init(app);
-            app->ray.rendering     = true;
-            app->ray.start_counter = get_time();
+            app->ray.rendering           = true;
+            app->ray.start_counter       = get_time();
+            app->ray.work_queue.finished = false;
+            // NOTE: this fence is probably not necessary
+            lock_add_return_prev(&app->ray.work_queue.next_work_order_i, 0);
         }
 
         if (app->ray.rendering) {
-            RayState *ray = &app->ray;
-            ray_render_tile(&ray->work_queue.work_orders[ray->work_queue.next_work_order_i++]);
+            RayState *ray   = &app->ray;
+            s32 avail_cores = ((s32)ray->cpu_core_cnt - 1) -
+                              ((s32)ray->work_queue.next_work_order_i -
+                              (s32)ray->work_queue.tiles_finished);
+            avail_cores = max(avail_cores, (s32)ray->cpu_core_cnt - 1);
+            for (s32 core = 0; core < avail_cores; ++core) {
+                if (ray->work_queue.next_work_order_i + 1 >= ray->work_queue.work_order_cnt) {
+                    break;
+                }
+                create_worker_thread(&ray->work_queue);
+                ++ray->work_queue.next_work_order_i;
+            }
+
             copy_back_buffer(app);
 
             print_progress((f32)ray->work_queue.next_work_order_i /
                            (f32)ray->work_queue.work_order_cnt);
-            if (ray->work_queue.next_work_order_i >= ray->work_queue.work_order_cnt) {
+            if (ray->work_queue.finished) {
                 app->ray.rendering = false;
                 app->draw_frame    = false;
                 print_finished();
@@ -202,12 +224,11 @@ fn void app_update(AppState *app)
 
         d3d11->context->IASetInputLayout(nullptr);
         d3d11->context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        once_only = true;
     }
 
     d3d11->context->PSSetShaderResources(0, 1, &g_sha_rsc_view);
     d3d11->context->OMSetRenderTargets(1, &d3d11->render_target_view, d3d11->depth_buf_view);
-
-    once_only = true;
 
 #ifdef TOM_INTERNAL
     if (key_pressed(kb->f3)) d3d11_print_info_queue(d3d11);
@@ -341,7 +362,7 @@ fn s32 app_start(HINSTANCE hinst)
     ThreadContext thread {};
 
     app.win32.running      = true;
-    app.suspend_lost_focus = false;
+    app.suspend_lost_focus = true;
 
     app.time = 0.0f;
     app_init(&app);

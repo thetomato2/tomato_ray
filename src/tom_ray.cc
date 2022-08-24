@@ -69,7 +69,7 @@ fn v3f ray_cast(World *world, v3f ray_orig, v3f ray_dir)
         u32 hit_mat_i = 0;
         v3f next_nrm  = {};
 
-        ++world->bounce_cnt;
+        // ++world->bounce_cnt;
 
         // plane
         for (u32 plane_i = 0; plane_i < world->plane_cnt; ++plane_i) {
@@ -164,7 +164,7 @@ fn void ray_render_tile(RayWorkOrder *wo)
             f32 ray_contrib = 1.0f / (f32)rays_per_pix;
             v3f col         = {};
             for (u32 ray_i = 0; ray_i < rays_per_pix; ++ray_i) {
-                ++wo->world->ray_cnt;
+                // ++wo->world->ray_cnt;
                 col += ray_contrib * ray_cast(wo->world, ray_orig, ray_dir);
             }
             col = exact_linear_to_sRGB(col);
@@ -189,6 +189,8 @@ fn void ray_init(AppState *app)
     ray->materials[4].scatter     = 1.0f;
     ray->materials[5].reflect_col = { 0.0f, 0.0f, 1.0f };
     ray->materials[5].scatter     = 1.0f;
+    ray->materials[6].reflect_col = { 0.9f, 0.9f, 0.9f };
+    ray->materials[6].scatter     = 0.9f;
 
     ray->plane.n     = { 0.0f, 0.0f, 1.0f };
     ray->plane.d     = 0;
@@ -205,6 +207,9 @@ fn void ray_init(AppState *app)
     ray->spheres[3].p     = { 0.3f, 1, 2 };
     ray->spheres[3].r     = 0.9f;
     ray->spheres[3].mat_i = 5;
+    ray->spheres[4].p     = { 0.5f, -8.0f, 0.5f };
+    ray->spheres[4].r     = 0.2f;
+    ray->spheres[4].mat_i = 3;
 
     ray->world.mat_cnt    = CountOf(ray->materials);
     ray->world.mats       = ray->materials;

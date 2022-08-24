@@ -55,10 +55,13 @@ struct RayWorkOrder
 
 struct RayWorkQueue
 {
+    b32 finished;
     u32 work_order_cnt;
     RayWorkOrder *work_orders;
 
-    volatile u32 next_work_order_i;
+    u64 next_work_order_i;
+    volatile u64 tiles_finished;
+
 };
 
 struct RayState
@@ -66,9 +69,9 @@ struct RayState
     b32 initialized;
     b32 rendering;
     b32 render_finished;
-    Material materials[6];
+    Material materials[7];
     Plane plane;
-    Sphere spheres[4];
+    Sphere spheres[5];
     World world;
     u32 cpu_core_cnt;
     u32 tile_w;
@@ -78,6 +81,8 @@ struct RayState
     s64 start_counter;
     
     RayWorkQueue work_queue;
+
+    
 };
 
 
